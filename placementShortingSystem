@@ -1,0 +1,287 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <algorithm>
+#include <queue>
+#include <map>
+#include <sstream>
+using namespace std;
+
+// Skill weights
+map<string, int> skillWeight = {
+    {"C++", 20}, {"DSA", 25}, {"OOP", 15},
+    {"Java", 20}, {"Python", 20},
+    {"SQL", 15}, {"HTML", 10}, {"CSS", 10},
+    {"GIT", 5}, {"JavaScript", 10}
+};
+
+class Candidate {
+public:
+    int id;
+    string name;
+    int marks;
+    vector<string> skills;
+    int testScore;
+    float finalScore;
+    string status;
+
+    void calculateScore() {
+        int skillScore = 0;
+
+        for (auto &s : skills) {
+            if (skillWeight.count(s))
+                skillScore += skillWeight[s];
+        }
+
+        finalScore =
+            0.5 * marks +
+            0.3 * skillScore +
+            0.2 * testScore;
+
+        if (finalScore >= 80 && skillScore >= 40)
+            status = "Shortlisted";
+        else
+            status = "Rejected";
+    }
+
+    string skillsToString() {
+        string s = "";
+        for (int i = 0; i < skills.size(); i++) {
+            s += skills[i];
+            if (i != skills.size() - 1)
+                s += "|";
+        }
+        return s;
+    }
+
+    void stringToSkills(string str) {
+        skills.clear();
+        stringstream ss(str);
+        string temp;
+        while (getline(ss, temp, '|')) {
+            skills.push_back(temp);
+        }
+    }
+};
+
+vector<Candidate> c;
+
+// Load
+void loadFromFile() {
+    ifstream file("candidates.txt");
+    if (!file) return;
+
+    c.clear();
+    Candidate temp;
+    string skillStr;
+
+    while (file >> temp.id >> temp.name >> temp.marks >> skillStr >> temp.testScore >> temp.finalScore >> temp.status) {
+        temp.stringToSkills(skillStr);
+        c.push_back(temp);
+    }
+
+    file.close();
+}
+
+// Save
+void saveToFile() {
+    ofstream file("candidates.txt");
+
+    for (auto &x : c) {
+        file << x.id << " "
+             << x.name << " "
+             << x.marks << " "
+             << x.skillsToString() << " "
+             << x.testScore << " "
+             << x.finalScore << " "
+             << x.status << endl;
+    }
+
+    file.close();
+}
+
+// Add
+void addCandidate() {
+    loadFromFile();
+
+    Candidate temp;
+    int nSkills;
+
+    cout << "\nEnter ID: ";
+    cin >> temp.id;
+
+    cout << "Enter Name: ";
+    cin >> temp.name;
+
+    cout << "Enter Marks: ";
+    cin >> temp.marks;
+
+    cout << "Enter number of skills: ";
+    cin >> nSkills;
+
+    cout << "Enter skills:\n";
+    for (int i = 0; i < nSkills; i++) {
+        string s;
+        cin >> s;
+        temp.skills.push_back(s);
+    }
+
+    cout << "Enter Test Score: ";
+    cin >> temp.testScore;
+
+    temp.calculateScore();
+
+    c.push_back(temp);
+
+    saveToFile();
+
+    cout << "\nCandidate Added\n";
+}
+
+// Display
+void displayCandidates() {
+    loadFromFile();
+
+    if (c.empty()) {
+        cout << "\nNo Candidates\n";
+        return;
+    }
+
+    cout << "\nID Name Marks Skills Test FinalScore Status\n";
+
+    for (auto &x : c) {
+        cout << x.id << " "
+             << x.name << " "
+             << x.marks << " ";
+
+        for (auto &s : x.skills)
+            cout << s << ",";
+
+        cout << " "
+             << x.testScore << " "
+             << x.finalScore << " "
+             << x.status << endl;
+    }
+}
+
+// Sort (Full Ranking)
+void sortCandidates() {
+    loadFromFile();
+
+    sort(c.begin(), c.end(), [](Candidate a, Candidate b) {
+        return a.finalScore > b.finalScore;
+    });
+
+    saveToFile();
+
+    cout << "\nSorted by Final Score\n";
+}
+
+// Priority Queue Comparator
+struct Compare {
+    bool operator()(Candidate a, Candidate b) {
+        return a.finalScore < b.finalScore;
+    }
+};
+
+// Top K using Heap
+void showTopK(int k) {
+    loadFromFile();
+
+    if (c.empty()) {
+        cout << "\nNo Candidates\n";
+        return;
+    }
+
+    priority_queue<Candidate, vector<Candidate>, Compare> pq;
+
+    for (auto &x : c)
+        pq.push(x);
+
+    cout << "\nTop " << k << " Candidates:\n";
+
+    for (int i = 0; i < k && !pq.empty(); i++) {
+        auto top = pq.top();
+        pq.pop();
+
+        cout << top.id << " "
+             << top.name << " "
+             << top.finalScore << endl;
+    }
+}
+
+// Skill Search
+void searchBySkill() {
+    loadFromFile();
+
+    string skill;
+    cout << "Enter skill: ";
+    cin >> skill;
+
+    cout << "\nCandidates with " << skill << ":\n";
+
+    for (auto &x : c) {
+        for (auto &s : x.skills) {
+            if (s == skill) {
+                cout << x.id << " "
+                     << x.name << " "
+                     << x.finalScore << endl;
+                break;
+            }
+        }
+    }
+}
+
+// Interview List
+void showShortlisted() {
+    loadFromFile();
+
+    cout << "\nShortlisted Candidates:\n";
+
+    for (auto &x : c) {
+        if (x.status == "Shortlisted") {
+            cout << x.id << " "
+                 << x.name << " "
+                 << x.finalScore << endl;
+        }
+    }
+}
+
+int main() {
+    int choice;
+
+    do {
+        cout << "\n===== Placement System =====\n";
+        cout << "1 Add Candidate\n";
+        cout << "2 Display Candidates\n";
+        cout << "3 Sort Candidates\n";
+        cout << "4 Show Shortlisted\n";
+        cout << "5 Show Top K Candidates\n";
+        cout << "6 Search by Skill\n";
+        cout << "7 Exit\n";
+
+        cout << "Enter Choice: ";
+        cin >> choice;
+
+        switch (choice) {
+        case 1: addCandidate(); break;
+        case 2: displayCandidates(); break;
+        case 3: sortCandidates(); break;
+        case 4: showShortlisted(); break;
+        case 5:
+        {
+            int k;
+            cout << "Enter K: ";
+            cin >> k;
+            showTopK(k);
+            break;
+        }
+        case 6: searchBySkill(); break;
+        case 7: cout << "Program Ended\n"; break;
+        default: cout << "Invalid Choice\n";
+        }
+
+    } while (choice != 7);
+
+    return 0;
+}
