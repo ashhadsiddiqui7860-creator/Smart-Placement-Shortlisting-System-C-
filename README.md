@@ -159,12 +159,6 @@ g++ project.cpp -o project
 
 ---
 
-## 🎤 Viva Explanation (Short)
-
-> This system evaluates candidates using weighted skill scoring and academic performance. It uses sorting for ranking and priority queue for efficient top candidate selection.
-
----
-
 ## 🚀 Future Improvements
 
 * Add candidate update/delete
